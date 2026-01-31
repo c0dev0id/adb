@@ -1,11 +1,31 @@
 CXXFLAGS ?= -std=gnu++17 -g -Wall -Wextra -Wno-deprecated-declarations
 CXXFLAGS += -DADB_HOST=1 -D_GNU_SOURCE
 
-INCLUDES := -I. -I.. -I../base/include -I../adf/libadf/include
+INCLUDES := -I. -I.. -I../base/include
 LIBS := -lpthread -lcrypto -lssl -lusb-1.0
-
-SRCS := $(wildcard *.cpp */*.cpp */*/*.cpp)
-SRCS := $(filter-out daemon/% sysdeps/win32/% development/% tests/% out/%, $(SRCS))
+SRCS := \
+    adb.cpp \
+    adb_client.cpp \
+    adb_io.cpp \
+    adb_utils.cpp \
+    adb_trace.cpp \
+    fdevent.cpp \
+    socket_spec.cpp \
+    transport.cpp \
+    transport_local.cpp \
+    file_sync_client.cpp \
+    console.cpp \
+    commandline.cpp \
+    line_printer.cpp \
+    services.cpp \
+    shell_service_protocol.cpp \
+    adb_auth_host.cpp \
+    transport_mdns.cpp \
+    bugreport.cpp \
+    adb_unique_fd.cpp \
+    client/main.cpp \
+    client/usb_dispatch.cpp \
+    client/usb_libusb.cpp
 
 OBJS := $(patsubst %.cpp,obj/%.o,$(patsubst %.c,obj/%.o,$(SRCS)))
 
@@ -15,12 +35,11 @@ TARGET := adb
 
 all: $(TARGET)
 
-# Link all objects into the adb binary
 $(TARGET): $(OBJS)
 	@echo "Linking $@"
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
-# Compile rules (objects are created under obj/ preserving directory structure)
+# Compile rules (create obj/ subdirs as needed)
 obj/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "CXX $<"
