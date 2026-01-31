@@ -2,7 +2,11 @@ CXX ?= c++
 CXXFLAGS ?= -std=gnu++17 -g -Wall -Wextra -Wno-deprecated-declarations
 CXXFLAGS += -DADB_HOST=1 -D_GNU_SOURCE
 
-INCLUDES := -I. -I.. -I../include -I../base/include -I../adf/libadf/include
+INCLUDES := -isystem /usr/include -isystem /usr/local/include -I. -I.. -I../include -I../base/include -I../adf/libadf/include
+
+CXXFLAGS += -D_Nonnull= -D_Nullable=
+CXXFLAGS += -DADB_VERSION="\"9.0.0_r61-OpenBSD\""
+
 LIBS := -lpthread -lcrypto -lssl -lusb-1.0
 SRCS := \
     adb.cpp \
