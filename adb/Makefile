@@ -1,93 +1,97 @@
-# Classic Makefile — attempt to build host 'adb' from this tree
+# Minimal Makefile to build host 'adb' on OpenBSD (fixed to find sources in repo root)
 # Usage:
-#   make                # build 'adb'
-#   make -j4            # parallel build
+#   cd adb && make
 #   make clean
 #
-# Common overrides:
-#   make EXTRA_INCLUDES="-I/some/path/include" EXTRA_LIBS="-L/some/path/lib -lfoo"
-#   or export EXTRA_CXXFLAGS / EXTRA_LDFLAGS before invoking make
+# Overrides:
+#   CXX, CXXFLAGS, EXTRA_INCLUDES, EXTRA_LIBS, EXTRA_LDFLAGS
+#
+# Notes:
+# - This builds the host adb only (ADB_HOST=1)
+# - It searches for .c/.cpp files in the parent directory (repo root).
+# - Excludes daemon/, sysdeps/win32/, development/, tests/, out/ and the adb/ dir itself.
 
-EXTRA_INCLUDES="../base/include"
-
-CXX ?= g++
+CXX ?= c++
 AR  ?= ar
 RM  ?= rm -f
-NPROC ?= $(shell nproc 2>/dev/null || echo 2)
+MKDIR_P ?= mkdir -p
 
 CXXFLAGS ?= -std=gnu++17 -O2 -g -Wall -Wextra -Wno-deprecated-declarations
-# Build for host paths in source
 CXXFLAGS += -DADB_HOST=1 -D_GNU_SOURCE
 
-# Hooks for the user to provide additional includes / flags
 EXTRA_INCLUDES ?=
 EXTRA_CXXFLAGS ?=
 EXTRA_LDFLAGS ?=
 EXTRA_LIBS ?=
 
-# Typical system libraries that adb expects on Linux. Adjust as needed.
-LIBS ?= -lpthread -lcrypto -lssl $(EXTRA_LIBS)
+PKG_CFLAGS := $(shell pkg-config --cflags libusb-1.0 2>/dev/null || echo)
+PKG_LIBS  := $(shell pkg-config --libs libusb-1.0 2>/dev/null || echo)
 
-# Search for all .cpp and .c files under the tree (recursively)
-SRCS := $(shell find . -name '*.cpp' -o -name '*.c' 2>/dev/null | sed 's|^\./||' | sort)
+# On OpenBSD, avoid -lrt
+LIBS ?= -lpthread -lcrypto -lssl $(PKG_LIBS) $(EXTRA_LIBS)
 
-# Convert source filenames to object filenames
-OBJS := $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(SRCS)))
+# Include current directory (adb/) and repo root (..), plus any extras
+INCLUDES := -I. -I.. $(PKG_CFLAGS) $(EXTRA_INCLUDES)
 
-# final targets
+# Find sources in repo root (parent dir). Strip leading "../" for internal paths.
+SRCS_RAW := $(shell find .. \( -name '*.c' -o -name '*.cpp' \) \
+    -not -path '../daemon/*' \
+    -not -path '../sysdeps/win32/*' \
+    -not -path '../development/*' \
+    -not -path '../tests/*' \
+    -not -path '../out/*' \
+    -not -path '../adb/*' 2>/dev/null | sort)
+
+SRCS := $(patsubst ../%,%,$(SRCS_RAW))
+
+# Map sources to object files under obj/
+OBJS := $(patsubst %.cpp,obj/%.o,$(patsubst %.c,obj/%.o,$(SRCS)))
+
 TARGET := adb
-STATIC_LIB := libadb.a
-
-# include flags
-INCLUDES := -I. $(EXTRA_INCLUDES)
+STATIC_LIB := obj/libadb.a
 
 .PHONY: all clean distclean install
 
 all: $(TARGET)
 
-# Archive a static library from all objects (useful if you want to link selectively)
 $(STATIC_LIB): $(OBJS)
-	@echo "ar rcs $@ (objects: $(words $(OBJS)))"
+	@echo "AR $@"
+	@$(MKDIR_P) $(dir $@)
 	$(AR) rcs $@ $(OBJS)
 
-# Link the adb executable from the static library (and system libs)
+# Link the adb executable
 $(TARGET): $(STATIC_LIB)
 	@echo "Linking $@"
 	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $(INCLUDES) -o $@ $^ $(EXTRA_LDFLAGS) $(LIBS)
 
-# Generic rules to compile .cpp and .c to .o
-# Uses the same directory layout for objects as sources (object next to source).
-# If desired, you can change to an out-of-tree objdir.
-%.o: %.cpp
-	@mkdir -p $(dir $@)
+# Compile rules: sources are referenced relative to repo root (../)
+obj/%.o: ../%.cpp
+	@$(MKDIR_P) $(dir $@)
 	@echo "CXX $<"
 	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-%.o: %.c
-	@mkdir -p $(dir $@)
+obj/%.o: ../%.c
+	@$(MKDIR_P) $(dir $@)
 	@echo "CC $<"
 	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	@echo "Cleaning objects and binaries..."
-	$(RM) $(OBJS) $(STATIC_LIB) $(TARGET)
+	@echo "Cleaning..."
+	$(RM) -r obj $(TARGET)
 
 distclean: clean
-	@echo "distclean (no extra artifacts to remove)"
 
 install: $(TARGET)
-	@echo "Installing $(TARGET) to /usr/local/bin (use INSTALL_PREFIX to change)"
+	@echo "Installing $(TARGET) to /usr/local/bin"
 	install -d $(DESTDIR)/usr/local/bin
 	install -m 0755 $(TARGET) $(DESTDIR)/usr/local/bin/$(TARGET)
 
-# Help target
 help:
-	@printf "Makefile targets:\n"
+	@printf "Targets:\n"
 	@printf "  make           Build $(TARGET)\n"
-	@printf "  make -jN       Parallel build\n"
-	@printf "  make clean     Remove .o and binaries\n"
-	@printf "Environment / make variables you can set:\n"
-	@printf "  EXTRA_INCLUDES  - additional -I paths\n"
-	@printf "  EXTRA_CXXFLAGS  - extra compiler flags\n"
-	@printf "  EXTRA_LDFLAGS   - extra linker flags\n"
-	@printf "  EXTRA_LIBS      - extra library flags (-L and -l)\n"
+	@printf "  make clean\n\n"
+	@printf "Environment/override variables:\n"
+	@printf "  CXX, CXXFLAGS, EXTRA_INCLUDES, EXTRA_CXXFLAGS\n"
+	@printf "  EXTRA_LDFLAGS, EXTRA_LIBS\n"
+	@printf "\nExample to add vendor includes and libs:\n"
+	@printf "  make EXTRA_INCLUDES='-I../base/include' EXTRA_LIBS='-L/path -lbase -lcutils -llog'\n"
