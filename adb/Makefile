@@ -1,39 +1,13 @@
-CXX ?= c++
-RM  ?= rm -f
-MKDIR_P ?= mkdir -p
-
-# Defaults (override from environment)
-CXXFLAGS ?= -std=gnu++17 -O2 -g -Wall -Wextra -Wno-deprecated-declarations
+CXXFLAGS ?= -std=gnu++17 -g -Wall -Wextra -Wno-deprecated-declarations
 CXXFLAGS += -DADB_HOST=1 -D_GNU_SOURCE
 
-PKG_CFLAGS := $(shell pkg-config --cflags libusb-1.0 2>/dev/null || echo)
-PKG_LIBS  := $(shell pkg-config --libs libusb-1.0 2>/dev/null || echo)
+INCLUDES := -I. -I.. -I../base/include -I../adf/libadf/include
+LIBS := -lpthread -lcrypto -lssl -lusb-1.0
 
-INCLUDES ?= -I. -I.. -I ../base/include -I ../adf/libadf/include $(PKG_CFLAGS)
+SRCS := $(wildcard *.cpp */*.cpp */*/*.cpp)
+SRCS := $(filter-out daemon/% sysdeps/win32/% development/% tests/% out/%, $(SRCS))
 
-LIBS ?= -lpthread -lcrypto -lssl $(PKG_LIBS)
-
-# Explicit list of sources (surgically selected — no find/scan)
-SRCS := \
-    ../adb.cpp \
-    ../adb_io.cpp \
-    ../adb_listeners.cpp \
-    ../adb_trace.cpp \
-    ../adb_utils.cpp \
-    ../fdevent.cpp \
-    ../sockets.cpp \
-    ../socket_spec.cpp \
-    ../sysdeps/errno.cpp \
-    ../transport.cpp \
-    ../transport_local.cpp \
-    ../transport_usb.cpp \
-    ../sysdeps_unix.cpp \
-    ../sysdeps/posix/network.cpp \
-    ../client/usb_dispatch.cpp \
-    ../client/usb_libusb.cpp \
-    ../client/usb_linux.cpp
-
-OBJS := $(patsubst ../%.cpp,obj/%.o,$(SRCS))
+OBJS := $(patsubst %.cpp,obj/%.o,$(patsubst %.c,obj/%.o,$(SRCS)))
 
 TARGET := adb
 
@@ -41,17 +15,22 @@ TARGET := adb
 
 all: $(TARGET)
 
-# Link
+# Link all objects into the adb binary
 $(TARGET): $(OBJS)
 	@echo "Linking $@"
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
-# Compile (sources live in repo root: ../)
-obj/%.o: ../%.cpp
-	@$(MKDIR_P) $(dir $@)
+# Compile rules (objects are created under obj/ preserving directory structure)
+obj/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	@echo "CXX $<"
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+obj/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "CC $<"
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 clean:
-	$(RM) $(TARGET)
-	$(RM) -r obj
+	@echo "Cleaning..."
+	-rm -rf obj $(TARGET)

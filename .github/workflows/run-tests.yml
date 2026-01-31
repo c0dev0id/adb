@@ -21,15 +21,14 @@ jobs:
       shell: sh
       run: |
         set -eux
-        SUDO=doas
-        ${SUDO} pkg_add -v pkgconf libusb libressl || ${SUDO} pkg_add -v pkgconf libusb openssl || true
+        doas pkg_add -v pkgconf libusb libressl || true
 
         CXX=${CXX:-c++}
         cd adb
         make clean || true
     
         # Build with android-base headers located at ../base/include
-        make -j2 EXTRA_INCLUDES="-I../base/include -I ../adf/libadf/include" CXX="$CXX"
+        make -j2
     
         # Smoke test: run the binary to ensure it starts
         if [ -x ./adb ]; then
