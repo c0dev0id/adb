@@ -31,7 +31,7 @@ PKG_LIBS  := $(shell pkg-config --libs libusb-1.0 2>/dev/null || echo)
 LIBS ?= -lpthread -lcrypto -lssl $(PKG_LIBS) $(EXTRA_LIBS)
 
 # Include current directory (adb/) and repo root (..), plus any extras
-INCLUDES := -I. -I.. $(PKG_CFLAGS) $(EXTRA_INCLUDES)
+INCLUDES := -I. -I.. -I../adf/libadf/include $(PKG_CFLAGS) $(EXTRA_INCLUDES)
 
 # Find sources in repo root (parent dir). Strip leading "../" for internal paths.
 SRCS_RAW := $(shell find .. \( -name '*.c' -o -name '*.cpp' \) \
@@ -39,6 +39,7 @@ SRCS_RAW := $(shell find .. \( -name '*.c' -o -name '*.cpp' \) \
     -not -path '../sysdeps/win32/*' \
     -not -path '../development/*' \
     -not -path '../tests/*' \
+    -not -path '../*/tests/*' \
     -not -path '../out/*' \
     -not -path '../adb/*' 2>/dev/null | sort)
 

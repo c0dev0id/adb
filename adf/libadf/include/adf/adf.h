@@ -21,6 +21,13 @@
 #include <stdbool.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
+
+// Define __user to empty for userspace to avoid C++ compilation errors
+// The __user annotation is a kernel-space marker that has no meaning in userspace
+#ifndef __user
+#define __user
+#endif
+
 #include <video/adf.h>
 
 typedef __u32 adf_id_t;
