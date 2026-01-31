@@ -1,7 +1,7 @@
 CXXFLAGS ?= -std=gnu++17 -g -Wall -Wextra -Wno-deprecated-declarations
 CXXFLAGS += -DADB_HOST=1 -D_GNU_SOURCE
 
-INCLUDES := -I. -I.. -I../base/include
+INCLUDES := -I. -I.. -I../include -I../base/include -I../adf/libadf/include
 LIBS := -lpthread -lcrypto -lssl -lusb-1.0
 SRCS := \
     adb.cpp \
