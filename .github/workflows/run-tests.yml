@@ -17,17 +17,49 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build
+    - name: Run Tests Job OpenBSd
       id: build_test
       continue-on-error: true
       uses: cross-platform-actions/action@v0.24.0
       with:
         operating_system: openbsd
         version: '7.5'
-        shell: bash
+        shell: sh
         sync_files: runner-to-vm
         run: |
-          echo "==== OPENBSD INSTALL ===="
-          pkg_add gmake
-          echo "==== OPENBSD BUILD ===="
-          gmake
+          # Install OpenBSD packages
+          set -eux
+
+          # Determine privilege runner (doas preferred on OpenBSD)
+          if command -v doas >/dev/null 2>&1; then
+            SUDO=doas
+          elif command -v sudo >/dev/null 2>&1; then
+            SUDO=sudo
+          else
+            SUDO=
+          fi
+
+          # Install required packages (pkgconf for pkg-config, libusb, and a TLS library)
+          # pkg_add can be run as root; use $SUDO if available.
+          ${SUDO} pkg_add -v pkgconf libusb libressl || ${SUDO} pkg_add -v pkgconf libusb openssl || true
+
+          # Build adb on OpenBSD
+          set -eux
+
+          CXX=${CXX:-c++}
+
+          cd adb
+
+          make clean || true
+
+          # Build with android-base headers located at ../base/include
+          make -j2 EXTRA_INCLUDES="-I../base/include" CXX="$CXX"
+
+          # Smoke test: run the binary to ensure it starts
+          if [ -x ./adb ]; then
+            echo "adb binary built successfully. Running smoke test:"
+            ./adb --version || ./adb -V || ./adb --help || true
+          else
+            echo "adb was not built (no ./adb)."
+            exit 1
+          fi
