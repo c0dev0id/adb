@@ -1,8 +1,3 @@
-# Minimal, explicit Makefile for building host 'adb'
-# Usage:
-#   cd adb && make
-# Overrides: CXX, CXXFLAGS, EXTRA_INCLUDES, EXTRA_LIBS, EXTRA_LDFLAGS
-
 CXX ?= c++
 RM  ?= rm -f
 MKDIR_P ?= mkdir -p
@@ -14,7 +9,8 @@ CXXFLAGS += -DADB_HOST=1 -D_GNU_SOURCE
 PKG_CFLAGS := $(shell pkg-config --cflags libusb-1.0 2>/dev/null || echo)
 PKG_LIBS  := $(shell pkg-config --libs libusb-1.0 2>/dev/null || echo)
 
-INCLUDES ?= -I. -I.. -I../adf/libadf/include $(PKG_CFLAGS)
+INCLUDES ?= -I. -I.. -I ../base/include -I ../adf/libadf/include $(PKG_CFLAGS)
+
 LIBS ?= -lpthread -lcrypto -lssl $(PKG_LIBS)
 
 # Explicit list of sources (surgically selected — no find/scan)
@@ -48,7 +44,7 @@ all: $(TARGET)
 # Link
 $(TARGET): $(OBJS)
 	@echo "Linking $@"
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^ $(EXTRA_LDFLAGS) $(LIBS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
 # Compile (sources live in repo root: ../)
 obj/%.o: ../%.cpp
