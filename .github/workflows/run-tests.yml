@@ -29,7 +29,7 @@ jobs:
         make clean || true
     
         # Build with android-base headers located at ../base/include
-        make -j2 EXTRA_INCLUDES="-I../base/include" CXX="$CXX"
+        make -j2 EXTRA_INCLUDES="-I../base/include" -I ../adf/libadf/include CXX="$CXX"
     
         # Smoke test: run the binary to ensure it starts
         if [ -x ./adb ]; then
