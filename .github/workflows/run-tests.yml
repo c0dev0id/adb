@@ -9,32 +9,24 @@ on:
 
 jobs:
   openbsd:
-    if: github.event_name != 'workflow_dispatch' || inputs.test_openbsd
-    name: OpenBSD
+    name: OpenBSD Test
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Build adb on OpenBSD
-      shell: sh
-      run: |
-        set -eux
-        doas pkg_add -v pkgconf libusb libressl || true
-
-        CXX=${CXX:-c++}
-        cd adb
-        make clean || true
-    
-        # Build with android-base headers located at ../base/include
-        make -j2
-    
-        # Smoke test: run the binary to ensure it starts
-        if [ -x ./adb ]; then
-          echo "adb binary built successfully. Running smoke test:"
-          ./adb --version || ./adb -V || ./adb --help || true
-        else
-          echo "adb was not built (no ./adb)."
-          exit 1
-        fi
+      - uses: actions/checkout@v4
+      - name: Build and Test on OpenBSD
+        uses: cross-platform-actions/action@v0.32.0
+        with:
+          operating_system: openbsd
+          version: '7.8'
+          run: |
+            doas pkg_add -v pkgconf libusb libressl
+            cd adb
+            make clean || true
+            make -j2
+            if [ -x ./adb ]; then
+              echo "adb binary built successfully. Running smoke test:"
+              ./adb --version || ./adb -V || ./adb --help || true
+            else
+              echo "adb was not built (no ./adb)."
+              exit 1
+            fi
