@@ -40,6 +40,7 @@ SRCS_RAW := $(shell find .. \( -name '*.c' -o -name '*.cpp' \) \
     -not -path '../development/*' \
     -not -path '../tests/*' \
     -not -path '../*/tests/*' \
+    -not -path '../adf/libadfhwc/*' \
     -not -path '../out/*' \
     -not -path '../adb/*' 2>/dev/null | sort)
 
