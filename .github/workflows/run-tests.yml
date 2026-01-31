@@ -19,7 +19,7 @@ jobs:
           operating_system: openbsd
           version: '7.8'
           run: |
-            doas pkg_add -v pkgconf libusb libressl
+            pkg_add -v pkgconf libusb libressl
             cd adb
             make clean || true
             make -j2
