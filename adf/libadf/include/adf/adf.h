@@ -22,8 +22,11 @@
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
-// Define __user to empty for userspace to avoid C++ compilation errors
-// The __user annotation is a kernel-space marker that has no meaning in userspace
+// Define __user to empty for userspace C++ compilation
+// The __user annotation is a Linux kernel sparse annotation that marks pointers
+// requiring copy_from_user/copy_to_user. It has no meaning in userspace and
+// causes C++ compilation errors when present in included kernel headers.
+// This must be defined before including video/adf.h which contains __user annotations.
 #ifndef __user
 #define __user
 #endif
