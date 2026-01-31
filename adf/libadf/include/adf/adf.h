@@ -21,6 +21,11 @@
 #include <stdbool.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
+
+#ifndef __user
+#define __user
+#endif
+
 #include <video/adf.h>
 
 typedef __u32 adf_id_t;
